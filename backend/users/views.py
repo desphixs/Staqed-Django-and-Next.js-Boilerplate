@@ -48,3 +48,13 @@ class CookieTokenRefreshView(TokenRefreshView): # Custom View to refresh tokens 
             request.data['refresh'] = refresh_token # Inject it into the data for SimpleJWT to process
             
         return super().post(request, *args, **kwargs) # Call the default refresh logic
+
+class MeView(APIView): # New view to get the current user's data
+    permission_classes = [permissions.IsAuthenticated] # Only logged-in users can see this
+
+    def get(self, request): # When they send a GET request
+        return Response({
+            "email": request.user.email, # Return their email
+            "first_name": request.user.first_name,
+            "last_name": request.user.last_name,
+        })

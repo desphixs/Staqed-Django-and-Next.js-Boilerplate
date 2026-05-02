@@ -177,3 +177,10 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False, # Don't blacklist old tokens (makes it easier for beginners)
     'AUTH_HEADER_TYPES': ('Bearer',), # We will send the token as "Bearer <token>"
 }
+
+# CORS Settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True # Required for HttpOnly Cookies
