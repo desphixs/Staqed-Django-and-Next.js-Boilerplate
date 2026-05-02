@@ -147,6 +147,9 @@ REST_FRAMEWORK = {
         'common.renderers.GenericJSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 # Spectacular Settings
@@ -164,3 +167,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+
+# SimpleJWT Settings
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # Access token lasts for 1 hour
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30), # Refresh token lasts for 30 days
+    'ROTATE_REFRESH_TOKENS': True, # Issue a new refresh token whenever one is used
+    'BLACKLIST_AFTER_ROTATION': False, # Don't blacklist old tokens (makes it easier for beginners)
+    'AUTH_HEADER_TYPES': ('Bearer',), # We will send the token as "Bearer <token>"
+}
