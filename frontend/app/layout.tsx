@@ -8,6 +8,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext"; 
 // We import the 'Navbar' component so it can be displayed at the top of every page.
 import Navbar from "@/components/Navbar";
+// We import our ThemeProvider to handle light and dark mode automatically
+import { ThemeProvider } from "@/components/ThemeProvider";
 // 'cn' is a helper utility used to neatly combine different CSS class names together.
 import { cn } from "@/lib/utils";
 
@@ -35,22 +37,30 @@ export default function RootLayout({
       {/* The body tag uses the 'Inter' font class to ensure all text on the site looks consistent. */}
       <body className={inter.className}>
         
-        {/* 
-            'AuthProvider' wraps the entire app. This is crucial logic: it ensures that 
-            no matter what page the user is on, the app knows if they are logged in or out.
-        */}
-        <AuthProvider>
-          {/* Since the Navbar is inside the Layout but outside the 'main' tag, it stays fixed at the top. */}
-          <Navbar />
-          
+        {/* ThemeProvider automatically adds the 'dark' class to html based on user preference */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {/* 
-              The 'main' tag is the container for your actual page content. 
-              The '{children}' part is where the specific code for your Home, Login, or Register pages will be injected.
+              'AuthProvider' wraps the entire app. This is crucial logic: it ensures that 
+              no matter what page the user is on, the app knows if they are logged in or out.
           */}
-          <main className="relative pt-32 min-h-screen">
-            {children}
-          </main>
-        </AuthProvider>
+          <AuthProvider>
+            {/* Since the Navbar is inside the Layout but outside the 'main' tag, it stays fixed at the top. */}
+            <Navbar />
+            
+            {/* 
+                The 'main' tag is the container for your actual page content. 
+                The '{children}' part is where the specific code for your Home, Login, or Register pages will be injected.
+            */}
+            <main className="relative pt-32 min-h-screen">
+              {children}
+            </main>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

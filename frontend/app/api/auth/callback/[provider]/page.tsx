@@ -51,19 +51,19 @@ export default function AuthCallbackPage() {
 
   // The UI returned below is a full-screen loading state that the user sees while the 'useEffect' is talking to the backend.
   return (
-    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col items-center justify-center bg-white overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col items-center justify-center bg-white dark:bg-black overflow-hidden">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
           {/* A pulsing background effect to make the loading screen feel more interactive. */}
-          <div className="absolute inset-0 animate-ping rounded-full bg-zinc-100 opacity-75"></div>
+          <div className="absolute inset-0 animate-ping rounded-full bg-zinc-100 dark:bg-zinc-900 opacity-75"></div>
           {/* The actual spinning icon. */}
-          <Loader2 className="relative h-12 w-12 animate-spin text-black stroke-[1.5]" />
+          <Loader2 className="relative h-12 w-12 animate-spin text-black dark:text-white stroke-[1.5]" />
         </div>
         <div className="space-y-1 text-center">
           {/* Primary status text. */}
-          <h2 className="text-lg font-semibold tracking-tight text-black">Authenticating</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-black dark:text-white">Authenticating</h2>
           {/* Dynamic sub-text that tells the user exactly which account (e.g., Google) is being connected. */}
-          <p className="text-sm font-medium text-zinc-500">Securely connecting your {provider} account...</p>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Securely connecting your {provider} account...</p>
         </div>
       </div>
     </div>
