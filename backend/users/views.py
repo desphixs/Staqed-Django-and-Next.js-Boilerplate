@@ -231,3 +231,209 @@ class GitHubLogin(APIView):
                 'refresh': str(refresh),
             }
         }, status=status.HTTP_200_OK)
+
+
+# ── MAGIC LINK & OTP VIEWS ────────────────────────────────────────────────────
+
+from .models import LoginToken                               # Our token/OTP database model
+from .emails import send_magic_link_email, send_otp_email   # Our email utility functions
+
+
+class RequestMagicLinkView(APIView):
+    """
+    POST /api/users/magic-link/request/
+    Body: { "email": "user@example.com" }
+
+    Generates a secure magic link token, saves it to the database,
+    and emails the user a one-click sign-in link.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+
+        if not email:
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Only send magic links to users who already have an account
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'No account found with this email address.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Generate the token (old unused tokens are auto-deleted inside the model method)
+        token_obj = LoginToken.generate_magic_link_token(email)
+
+        # Build the full URL the user will click — this points to the frontend verify page
+        frontend_url = settings.FRONTEND_URL
+        magic_link = f"{frontend_url}/auth/magic-link?token={token_obj.token}"
+
+        # Send the email
+        send_magic_link_email(
+            to_email=email,
+            magic_link=magic_link,
+            first_name=user.first_name,
+        )
+
+        return Response(
+            {'message': 'Magic link sent! Check your inbox.'},
+            status=status.HTTP_200_OK
+        )
+
+
+class VerifyMagicLinkView(APIView):
+    """
+    POST /api/users/magic-link/verify/
+    Body: { "token": "abc123..." }
+
+    Validates the token from the magic link URL.
+    If valid, marks it as used and returns a JWT to log the user in.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token', '').strip()
+
+        if not token:
+            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up the token in our database
+        try:
+            token_obj = LoginToken.objects.get(token=token, token_type='magic_link')
+        except LoginToken.DoesNotExist:
+            return Response(
+                {'error': 'Invalid magic link. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check it hasn't expired or been used already
+        if not token_obj.is_valid():
+            return Response(
+                {'error': 'This magic link has expired or already been used. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Mark the token as consumed so it can never be used again
+        token_obj.is_used = True
+        token_obj.save(update_fields=['is_used'])
+
+        # Find the user — they must exist because we checked during the request step
+        try:
+            user = User.objects.get(email=token_obj.email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Issue our own JWT tokens for this user
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'data': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class RequestOTPView(APIView):
+    """
+    POST /api/users/otp/request/
+    Body: { "email": "user@example.com" }
+
+    Generates a 6-digit OTP, saves it to the database,
+    and emails it to the user.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+
+        if not email:
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Only send OTPs to users who already have an account
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'No account found with this email address.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Generate the OTP (old unused OTPs are auto-deleted inside the model method)
+        token_obj = LoginToken.generate_otp(email)
+
+        # Send the OTP via email
+        send_otp_email(
+            to_email=email,
+            otp=token_obj.token,
+            first_name=user.first_name,
+        )
+
+        return Response(
+            {'message': 'OTP sent! Check your inbox.'},
+            status=status.HTTP_200_OK
+        )
+
+
+class VerifyOTPView(APIView):
+    """
+    POST /api/users/otp/verify/
+    Body: { "email": "user@example.com", "otp": "123456" }
+
+    Validates the 6-digit OTP against our database.
+    If valid, marks it as used and returns a JWT to log the user in.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        otp   = request.data.get('otp', '').strip()
+
+        if not email or not otp:
+            return Response(
+                {'error': 'Both email and OTP are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Look for a matching OTP for this email
+        try:
+            token_obj = LoginToken.objects.get(
+                email=email,
+                token=otp,
+                token_type='otp',
+            )
+        except LoginToken.DoesNotExist:
+            return Response(
+                {'error': 'Invalid OTP. Please check the code and try again.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check it hasn't expired or been used
+        if not token_obj.is_valid():
+            return Response(
+                {'error': 'This OTP has expired or already been used. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Mark as consumed
+        token_obj.is_used = True
+        token_obj.save(update_fields=['is_used'])
+
+        # Get the user
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Issue JWT
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'data': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        }, status=status.HTTP_200_OK)

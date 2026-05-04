@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'anymail',             # Handles sending emails through external providers like Resend
 
     # Local apps
     'common',
@@ -74,7 +75,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -196,3 +197,19 @@ SOCIAL_AUTH = {
         'client_secret': env('GITHUB_CLIENT_SECRET', default=''),
     },
 }
+
+# ── Email Settings (via Resend + django-anymail) ───────────────────────────────
+
+# Route all Django emails through Resend
+EMAIL_BACKEND = 'anymail.backends.resend.EmailBackend'
+
+# The "from" address shown to users in their inbox
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Staqed <noreply@staqed.com>')
+
+# Anymail reads your Resend API key here
+ANYMAIL = {
+    'RESEND_API_KEY': env('RESEND_API_KEY', default=''),
+}
+
+# The base URL of your frontend — used to build magic link URLs in emails
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')

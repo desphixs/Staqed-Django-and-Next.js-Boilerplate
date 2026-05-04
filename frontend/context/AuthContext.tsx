@@ -17,6 +17,10 @@ interface AuthContextType {
   login: (credentials: any) => Promise<void>; // A function to handle signing in.
   register: (data: any) => Promise<void>; // A function to handle signing up.
   socialLogin: (provider: string, code: string) => Promise<void>; // A function to handle social login tokens.
+  requestMagicLink: (email: string) => Promise<void>;
+  verifyMagicLink: (token: string) => Promise<void>;
+  requestOTP: (email: string) => Promise<void>;
+  verifyOTP: (email: string, otp: string) => Promise<void>;
   logout: () => void; // A function to kick the user out and clear their data.
   isAuthenticated: boolean; // A simple 'Yes' or 'No' (true/false) to check if someone is logged in.
   loading: boolean; // A way to tell the app "Wait, I'm still checking if there's an active session."
@@ -97,6 +101,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/login'); 
   };
 
+  const requestMagicLink = async (email: string) => {
+    await api.post('/users/magic-link/request/', { email });
+  };
+
+  const verifyMagicLink = async (token: string) => {
+    const response = await api.post('/users/magic-link/verify/', { token });
+    const { access } = response.data.data;
+    localStorage.setItem('access_token', access);
+    const userResponse = await api.get('/users/me/');
+    setUser(userResponse.data.data);
+    router.push('/');
+  };
+
+  const requestOTP = async (email: string) => {
+    await api.post('/users/otp/request/', { email });
+  };
+
+  const verifyOTP = async (email: string, otp: string) => {
+    const response = await api.post('/users/otp/verify/', { email, otp });
+    const { access } = response.data.data;
+    localStorage.setItem('access_token', access);
+    const userResponse = await api.get('/users/me/');
+    setUser(userResponse.data.data);
+    router.push('/');
+  };
+
   // This function handles logging the user out.
   const logout = () => {
     // We delete the digital key (token) from the browser's memory.
@@ -128,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     // We provide all our variables and functions (user, login, logout, etc.) to the 'Value' prop.
     // 'isAuthenticated' is a shortcut: if 'user' exists, it's true. If 'user' is null, it's false.
-    <AuthContext.Provider value={{ user, login, register, socialLogin, logout, isAuthenticated: !!user, loading }}>
+    <AuthContext.Provider value={{ user, login, register, socialLogin, requestMagicLink, verifyMagicLink, requestOTP, verifyOTP, logout, isAuthenticated: !!user, loading }}>
       {/* The 'children' represents the rest of your app. They can now all access the Auth data. */}
       {children}  
     </AuthContext.Provider>
