@@ -59,17 +59,129 @@ class MeView(APIView): # New view to get the current user's data
             "last_name": request.user.last_name,
         })
 
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
-from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from dj_rest_auth.registration.views import SocialLoginView
+import requests as http_requests
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
 
-class GoogleLogin(SocialLoginView): # View to handle Google Login
-    adapter_class = GoogleOAuth2Adapter
-    callback_url = "http://localhost:3000/api/auth/callback/google" # The URL Google redirects to
-    client_class = OAuth2Client
+User = get_user_model()
 
-class GitHubLogin(SocialLoginView): # View to handle GitHub Login
-    adapter_class = GitHubOAuth2Adapter
-    callback_url = "http://localhost:3000/api/auth/callback/github" # The URL GitHub redirects to
-    client_class = OAuth2Client
+class GoogleLogin(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        code = request.data.get('code')
+        if not code:
+            return Response({'error': 'Code is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 1: Exchange the authorization code for Google tokens
+        token_res = http_requests.post('https://oauth2.googleapis.com/token', data={
+            'code': code,
+            'client_id': settings.SOCIAL_AUTH['google']['client_id'],
+            'client_secret': settings.SOCIAL_AUTH['google']['client_secret'],
+            'redirect_uri': 'http://localhost:3000/api/auth/callback/google',
+            'grant_type': 'authorization_code',
+        })
+
+        if token_res.status_code != 200:
+            return Response({'error': 'Failed to exchange code with Google'}, status=status.HTTP_400_BAD_REQUEST)
+
+        access_token = token_res.json().get('access_token')
+
+        # Step 2: Use the access token to fetch the user's profile from Google
+        userinfo_res = http_requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+
+        if userinfo_res.status_code != 200:
+            return Response({'error': 'Failed to fetch user info from Google'}, status=status.HTTP_400_BAD_REQUEST)
+
+        userinfo = userinfo_res.json()
+        email = userinfo.get('email')
+        first_name = userinfo.get('given_name', '')
+        last_name = userinfo.get('family_name', '')
+
+        if not email:
+            return Response({'error': 'No email returned from Google'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 3: Get or create the user in our database
+        user, _ = User.objects.get_or_create(
+            email=email,
+            defaults={'first_name': first_name, 'last_name': last_name}
+        )
+
+        # Step 4: Issue our own JWT tokens for the user
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'data': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class GitHubLogin(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        code = request.data.get('code')
+        if not code:
+            return Response({'error': 'Code is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 1: Exchange the authorization code for a GitHub access token
+        token_res = http_requests.post('https://github.com/login/oauth/access_token', data={
+            'code': code,
+            'client_id': settings.SOCIAL_AUTH['github']['client_id'],
+            'client_secret': settings.SOCIAL_AUTH['github']['client_secret'],
+            'redirect_uri': 'http://localhost:3000/api/auth/callback/github',
+        }, headers={'Accept': 'application/json'})
+
+        if token_res.status_code != 200:
+            return Response({'error': 'Failed to exchange code with GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+
+        access_token = token_res.json().get('access_token')
+
+        # Step 2: Fetch the user's profile from GitHub
+        userinfo_res = http_requests.get(
+            'https://api.github.com/user',
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+        email_res = http_requests.get(
+            'https://api.github.com/user/emails',
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+
+        if userinfo_res.status_code != 200:
+            return Response({'error': 'Failed to fetch user info from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+
+        userinfo = userinfo_res.json()
+        name_parts = (userinfo.get('name') or '').split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+        # GitHub may not expose email publicly, so we fetch from the emails endpoint
+        email = userinfo.get('email')
+        if not email and email_res.status_code == 200:
+            emails = email_res.json()
+            primary = next((e for e in emails if e.get('primary') and e.get('verified')), None)
+            email = primary['email'] if primary else None
+
+        if not email:
+            return Response({'error': 'No verified email returned from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 3: Get or create the user
+        user, _ = User.objects.get_or_create(
+            email=email,
+            defaults={'first_name': first_name, 'last_name': last_name}
+        )
+
+        # Step 4: Issue our own JWT tokens
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'data': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        }, status=status.HTTP_200_OK)

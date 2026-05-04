@@ -16,6 +16,7 @@ interface AuthContextType {
   user: any; // This will hold the user's personal info (like name and email).
   login: (credentials: any) => Promise<void>; // A function to handle signing in.
   register: (data: any) => Promise<void>; // A function to handle signing up.
+  socialLogin: (provider: string, code: string) => Promise<void>; // A function to handle social login tokens.
   logout: () => void; // A function to kick the user out and clear their data.
   isAuthenticated: boolean; // A simple 'Yes' or 'No' (true/false) to check if someone is logged in.
   loading: boolean; // A way to tell the app "Wait, I'm still checking if there's an active session."
@@ -106,10 +107,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/login'); 
   };
 
+  // This function handles logging in with a social provider (Google/GitHub)
+  const socialLogin = async (provider: string, code: string) => {
+    // We send the code we got from the social provider to our backend translator.
+    const response = await api.post(`/users/${provider}/`, { code });
+    
+    // We extract the access token from the response.
+    const { access } = response.data.data;
+    // We save the token in the browser's memory.
+    localStorage.setItem('access_token', access);
+    
+    // We fetch the real user data from our backend.
+    const userResponse = await api.get('/users/me/');
+    setUser(userResponse.data.data);
+    
+    // We send the user to the Home page.
+    router.push('/');
+  };
+
   return (
     // We provide all our variables and functions (user, login, logout, etc.) to the 'Value' prop.
     // 'isAuthenticated' is a shortcut: if 'user' exists, it's true. If 'user' is null, it's false.
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, loading }}>
+    <AuthContext.Provider value={{ user, login, register, socialLogin, logout, isAuthenticated: !!user, loading }}>
       {/* The 'children' represents the rest of your app. They can now all access the Auth data. */}
       {children}  
     </AuthContext.Provider>

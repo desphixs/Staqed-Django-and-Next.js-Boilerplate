@@ -47,22 +47,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites', # Required by django-allauth
 
     # Third party apps
     'rest_framework',
-    'rest_framework.authtoken', # Required by dj-rest-auth
     'corsheaders',
     'drf_spectacular',
-    
-    # Social Auth
-    'dj_rest_auth',
-    'dj_rest_auth.registration',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.github',
 
     # Local apps
     'common',
@@ -76,7 +65,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware', # Required by django-allauth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -197,24 +185,14 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True # Required for HttpOnly Cookies
 
-# Social Auth & Allauth Configuration
-SITE_ID = 1 # Required for django-allauth sites framework
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend', # Default Django auth
-    'allauth.account.auth_backends.AuthenticationBackend', # Allauth specific auth
-]
-
-# Allauth Settings
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None # We don't have a username field
-ACCOUNT_EMAIL_REQUIRED = True # Email is mandatory
-ACCOUNT_USERNAME_REQUIRED = False # Username is not used
-ACCOUNT_AUTHENTICATION_METHOD = 'email' # Log in using email
-ACCOUNT_EMAIL_VERIFICATION = 'none' # Skip verification for simplicity in boilerplate
-
-# dj-rest-auth Settings
-REST_AUTH = {
-    'USE_JWT': True, # Use JSON Web Tokens instead of standard tokens
-    'JWT_AUTH_HTTPONLY': False, # Keep it simple for frontend access to access_token
-    'USER_DETAILS_SERIALIZER': 'users.serializers.UserRegistrationSerializer',
+# Social OAuth credentials (used directly in views.py)
+SOCIAL_AUTH = {
+    'google': {
+        'client_id': env('GOOGLE_CLIENT_ID'),
+        'client_secret': env('GOOGLE_CLIENT_SECRET'),
+    },
+    'github': {
+        'client_id': env('GITHUB_CLIENT_ID', default=''),
+        'client_secret': env('GITHUB_CLIENT_SECRET', default=''),
+    },
 }
