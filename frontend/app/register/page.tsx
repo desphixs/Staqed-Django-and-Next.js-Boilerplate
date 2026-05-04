@@ -13,6 +13,7 @@ import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
 // 'Link' is for moving between pages quickly without a full page reload.
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 /**
  * THE REGISTRATION BLUEPRINT (Schema)
@@ -92,7 +93,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 pt-20">
+    <>
+      <Navbar />
+      <div className="flex flex-col items-center justify-center px-4 pt-28">
       <div className="card-minimal w-full max-w-lg rounded-2xl p-8">
         <h1 className="mb-2 text-2xl font-bold tracking-tight text-black dark:text-white">Create Account</h1>
         <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">Join Staqed and start building today.</p>
@@ -220,5 +223,6 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

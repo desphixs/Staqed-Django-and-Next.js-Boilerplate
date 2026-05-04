@@ -3,12 +3,15 @@
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { ArrowRight, Terminal, Code, Cpu, Globe, Zap } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <div className="relative flex min-h-[calc(100vh-64px)] flex-col items-center justify-center overflow-hidden">
+    <>
+      <Navbar />
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-32">
       
       {/* Subtle Background Grid */}
       <div className="absolute inset-0 -z-10 h-full w-full bg-white dark:bg-black bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
@@ -68,6 +71,7 @@ export default function Home() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

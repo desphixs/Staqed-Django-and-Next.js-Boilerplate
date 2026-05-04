@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 // 'Link' allows for fast navigation to the Register page without a full browser refresh.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 
 /**
  * THE RULE BOOKS (Validation Schemas)
@@ -132,7 +133,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 pt-20">
+    <>
+      <Navbar />
+      <div className="flex flex-col items-center justify-center px-4 pt-28">
       <div className="card-minimal w-full max-w-md rounded-2xl p-8">
         
         <h1 className="mb-2 text-2xl font-bold tracking-tight text-black dark:text-white">Welcome Back</h1>
@@ -339,5 +342,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

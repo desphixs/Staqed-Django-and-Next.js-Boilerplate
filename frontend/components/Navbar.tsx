@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { LogOut, User as UserIcon, Settings, Shield } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import Logo from './Logo';
 
 // Import Shadcn components
 import {
@@ -43,10 +44,7 @@ const Navbar = () => {
   if (!mounted) return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-black/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-black dark:text-white">
-          <Shield className="h-6 w-6" />
-          STAQED
-        </div>
+        <Logo />
       </div>
     </nav>
   );
@@ -56,10 +54,7 @@ const Navbar = () => {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tight text-black dark:text-white">
-          <Shield className="h-6 w-6" />
-          STAQED
-        </Link>
+        <Logo />
 
         {/* Links & Auth State */}
         <div className="flex items-center gap-8">
@@ -94,15 +89,26 @@ const Navbar = () => {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800" />
                   
-                  <DropdownMenuItem className="cursor-pointer rounded-lg p-2 focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-black dark:focus:text-white">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
+                  <Link href="/dashboard" className="w-full">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg p-2 focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-black dark:focus:text-white">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </DropdownMenuItem>
+                  </Link>
+
+                  <Link href="/dashboard/profile" className="w-full">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg p-2 focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-black dark:focus:text-white">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                  </Link>
                   
-                  <DropdownMenuItem className="cursor-pointer rounded-lg p-2 focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-black dark:focus:text-white">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
+                  <Link href="/dashboard/settings" className="w-full">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg p-2 focus:bg-zinc-100 dark:focus:bg-zinc-800 focus:text-black dark:focus:text-white">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                  </Link>
                   
                   <DropdownMenuSeparator className="bg-zinc-100 dark:bg-zinc-800" />
                   

@@ -6,8 +6,6 @@ import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 // We import 'AuthProvider'—this is a "wrapper" that shares user login info with every component in the app.
 import { AuthProvider } from "@/context/AuthContext"; 
-// We import the 'Navbar' component so it can be displayed at the top of every page.
-import Navbar from "@/components/Navbar";
 // We import our ThemeProvider to handle light and dark mode automatically
 import { ThemeProvider } from "@/components/ThemeProvider";
 // 'cn' is a helper utility used to neatly combine different CSS class names together.
@@ -49,14 +47,11 @@ export default function RootLayout({
               no matter what page the user is on, the app knows if they are logged in or out.
           */}
           <AuthProvider>
-            {/* Since the Navbar is inside the Layout but outside the 'main' tag, it stays fixed at the top. */}
-            <Navbar />
-            
             {/* 
                 The 'main' tag is the container for your actual page content. 
                 The '{children}' part is where the specific code for your Home, Login, or Register pages will be injected.
             */}
-            <main className="relative pt-32 min-h-screen">
+            <main className="relative min-h-screen">
               {children}
             </main>
           </AuthProvider>
