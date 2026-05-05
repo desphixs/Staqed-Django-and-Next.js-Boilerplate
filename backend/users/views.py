@@ -78,17 +78,80 @@ class CookieTokenRefreshView(TokenRefreshView):
 
 # --- USER PROFILE ---
 
+# --- USER PROFILE ---
+
+from .serializers import UserDetailSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+
 class MeView(APIView): 
     # Logic: Only users with a valid token (logged in) are allowed to see this page
     permission_classes = [permissions.IsAuthenticated] 
 
     def get(self, request): 
-        # 'request.user' is automatically filled by Django based on the provided token
+        # Use our comprehensive serializer to return full user + profile info
+        serializer = UserDetailSerializer(request.user)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        # Allow updating profile info (names, bio)
+        serializer = UserDetailSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+import cloudinary.uploader
+from django.core.files.storage import default_storage
+
+class ProfilePictureUpdateView(APIView):
+    """
+    Separate view specifically for uploading, retrieving, and deleting 
+    the user's profile picture. Handles manual upload to Cloudinary or Local storage.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        profile = request.user.profile
+        file_obj = request.FILES.get('profile_picture')
+        
+        if not file_obj:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        storage_provider = getattr(settings, 'STORAGE_PROVIDER', 'local')
+
+        if storage_provider == 'cloudinary':
+            # Upload directly to Cloudinary using their SDK
+            try:
+                upload_result = cloudinary.uploader.upload(file_obj, folder="profile_pics/")
+                profile.profile_picture = upload_result.get('secure_url')
+            except Exception as e:
+                return Response({'error': f'Cloudinary upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Local storage fallback
+            file_name = f"profile_pics/user_{request.user.id}_{file_obj.name}"
+            path = default_storage.save(file_name, file_obj)
+            # Generate a full URL for the frontend
+            request_host = request.build_absolute_uri('/')[:-1]
+            profile.profile_picture = f"{request_host}{settings.MEDIA_URL}{path}"
+
+        profile.save()
+        
         return Response({
-            "email": request.user.email, # Return the logged-in user's data
-            "first_name": request.user.first_name,
-            "last_name": request.user.last_name,
+            'message': 'Profile picture updated successfully',
+            'profile_picture': profile.profile_picture
         })
+
+    def delete(self, request):
+        profile = request.user.profile
+        if profile.profile_picture:
+            # Note: We don't necessarily delete the file from the cloud in this dummy implementation
+            # to keep it simple, but we clear the URL from our database.
+            profile.profile_picture = None
+            profile.save()
+            return Response({'message': 'Profile picture removed from profile successfully'})
+        return Response({'message': 'No profile picture to delete'}, status=status.HTTP_404_NOT_FOUND)
 
 # --- SOCIAL AUTHENTICATION (GOOGLE & GITHUB) ---
 

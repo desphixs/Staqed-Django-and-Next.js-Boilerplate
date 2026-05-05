@@ -1,8 +1,38 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import DashboardWrapper from '@/components/dashboard/DashboardWrapper';
 import { Edit3, } from 'lucide-react';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 export default function ProfilePage() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await api.get('/users/me/');
+        setUser(response.data.data);
+      } catch (err) {
+        console.error('Failed to fetch profile', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardWrapper>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
+        </div>
+      </DashboardWrapper>
+    );
+  }
 
   return (
     <DashboardWrapper>
@@ -16,19 +46,23 @@ export default function ProfilePage() {
         <div className="relative -mt-20 px-4 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex flex-col md:flex-row items-end gap-6">
-              <div className="h-40 w-40 rounded-3xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-5xl font-black border-8 border-white dark:border-zinc-950 shadow-2xl">
-                DF
+              <div className="h-40 w-40 rounded-3xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-5xl font-black border-8 border-white dark:border-zinc-950 shadow-2xl overflow-hidden">
+                {user?.profile?.profile_picture ? (
+                  <img src={user.profile.profile_picture} alt={user.full_name} className="h-full w-full object-cover" />
+                ) : (
+                  user?.first_name?.[0] || 'U'
+                )}
               </div>
               <div className="pb-2">
                 <div className="flex items-center gap-3">
                   <h1 className="text-4xl font-black tracking-tight text-black dark:text-white">
-                    Destiny Frank
+                    {user?.full_name}
                   </h1>
                   <span className="px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                     Pro
                   </span>
                 </div>
-                <p className="text-zinc-500 dark:text-zinc-400 font-medium">@destiny_frank</p>
+                <p className="text-zinc-500 dark:text-zinc-400 font-medium">{user?.email}</p>
               </div>
             </div>
             
@@ -45,9 +79,9 @@ export default function ProfilePage() {
             {/* ABOUT / BIO */}
             <div className="lg:col-span-2 space-y-8">
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-black dark:text-white">Professional Bio</h2>
+                <h2 className="text-2xl font-bold text-black dark:text-white">Biography</h2>
                 <p className="text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-3xl">
-                  Product Designer and Software Architect focused on building high-performance SaaS applications. I specialize in bridging the gap between design and engineering to create seamless user experiences.
+                  {user?.profile?.bio || "No biography provided yet. Head to settings to add one!"}
                 </p>
               </div>
             </div>

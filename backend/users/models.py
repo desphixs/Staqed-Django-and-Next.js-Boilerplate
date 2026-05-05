@@ -36,6 +36,15 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel): # Our main User model
     def __str__(self): # How the user appears in logs/admin
         return self.email # Show their email address
 
+    @property
+    def safe_profile(self):
+        """
+        Returns the user's profile, creating it if it doesn't exist.
+        This prevents 'RelatedObjectDoesNotExist' errors for legacy users.
+        """
+        profile, _ = Profile.objects.get_or_create(user=self)
+        return profile
+
 
 class LoginToken(models.Model):
     """
@@ -105,3 +114,33 @@ class LoginToken(models.Model):
 
     def __str__(self):
         return f"{self.token_type} for {self.email} ({'used' if self.is_used else 'active'})"
+
+
+class Profile(BaseModel): # Model to store additional user information
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile') # Link to the User model
+    bio = models.TextField(max_length=500, blank=True) # Optional biography
+    profile_picture = models.URLField(max_length=500, blank=True, null=True) # URL to the user profile picture
+    
+    # Preferences
+    public_profile = models.BooleanField(default=True)
+    email_notifications = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Profile for {self.user.email}"
+
+# SIGNALS: We want to automatically create a Profile object whenever a new User is created.
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def handle_user_profile(sender, instance, **kwargs):
+    """
+    Signal handler that ensures every user has a Profile.
+    If it doesn't exist (legacy users), we create it.
+    If it does, we save it.
+    """
+    # Using get_or_create is the cleanest way to backfill missing profiles for legacy users
+    Profile.objects.get_or_create(user=instance)
+    
+    # After ensuring it exists, we save it to persist any related changes
+    instance.profile.save()

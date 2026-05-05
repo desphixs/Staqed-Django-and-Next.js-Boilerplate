@@ -4,6 +4,7 @@ from .views import (
     GoogleLogin, GitHubLogin,
     RequestMagicLinkView, VerifyMagicLinkView,
     RequestOTPView, VerifyOTPView,
+    ProfilePictureUpdateView,
 )
 
 urlpatterns = [
@@ -12,6 +13,7 @@ urlpatterns = [
     path('login/',          LoginView.as_view(),             name='auth_login'),
     path('token/refresh/',  CookieTokenRefreshView.as_view(),name='token_refresh'),
     path('me/',             MeView.as_view(),                name='user_me'),
+    path('me/photo/',       ProfilePictureUpdateView.as_view(), name='user_photo'),
 
     # ── Social Auth ────────────────────────────────────────────────────────────
     path('google/',         GoogleLogin.as_view(),           name='google_login'),

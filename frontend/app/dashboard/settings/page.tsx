@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DashboardWrapper from '@/components/dashboard/DashboardWrapper';
 import { 
   User, 
@@ -15,17 +15,46 @@ import {
   Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
 type Tab = 'general' | 'profile' | 'security';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await api.get('/users/me/');
+      setUser(response.data.data);
+    } catch (err) {
+      toast.error('Failed to load user settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
   const tabs = [
     { id: 'general', label: 'General', icon: <Settings size={18} /> },
     { id: 'profile', label: 'Profile Settings', icon: <User size={18} /> },
     { id: 'security', label: 'Security', icon: <Shield size={18} /> },
   ];
+
+  if (loading) {
+    return (
+      <DashboardWrapper>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
+        </div>
+      </DashboardWrapper>
+    );
+  }
 
   return (
     <DashboardWrapper>
@@ -58,8 +87,8 @@ export default function SettingsPage() {
 
         {/* TAB CONTENT */}
         <div className="py-4">
-          {activeTab === 'general' && <GeneralTab />}
-          {activeTab === 'profile' && <ProfileTab />}
+          {activeTab === 'general' && <GeneralTab user={user} refresh={fetchUserData} />}
+          {activeTab === 'profile' && <ProfileTab user={user} refresh={fetchUserData} />}
           {activeTab === 'security' && <SecurityTab />}
         </div>
       </div>
@@ -67,7 +96,21 @@ export default function SettingsPage() {
   );
 }
 
-function GeneralTab() {
+function GeneralTab({ user, refresh }: { user: any; refresh: () => void }) {
+  const handleToggle = async (field: string, value: boolean) => {
+    try {
+      await api.patch('/users/me/', {
+        profile: {
+          [field]: value
+        }
+      });
+      toast.success('Preference updated');
+      refresh();
+    } catch (err) {
+      toast.error('Failed to update preference');
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <Section title="System Preferences" description="Configure how you interact with the platform.">
@@ -76,53 +119,143 @@ function GeneralTab() {
             title="Email Notifications" 
             description="Receive updates about your project activity and team mentions."
             icon={<Bell size={20} />}
-            defaultChecked
+            checked={user?.profile?.email_notifications}
+            onChange={(checked: boolean) => handleToggle('email_notifications', checked)}
           />
           <ToggleOption 
             title="Public Profile" 
             description="Allow other users in your organization to see your activity."
             icon={<Globe size={20} />}
+            checked={user?.profile?.public_profile}
+            onChange={(checked: boolean) => handleToggle('public_profile', checked)}
           />
         </div>
-      </Section>
-
-      <Section title="Danger Zone" description="Irreversible actions for your account.">
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
-          <Trash2 size={18} />
-          Delete Account
-        </button>
       </Section>
     </div>
   );
 }
 
-function ProfileTab() {
+function ProfileTab({ user, refresh }: { user: any; refresh: () => void }) {
+  const [formData, setFormData] = useState({
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
+    bio: user?.profile?.bio || '',
+  });
+  const [updating, setUpdating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpdateProfile = async () => {
+    setUpdating(true);
+    try {
+      await api.patch('/users/me/', {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        profile: {
+          bio: formData.bio
+        }
+      });
+      toast.success('Profile updated successfully!');
+      refresh();
+    } catch (err) {
+      toast.error('Failed to update profile');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const uploadData = new FormData();
+    uploadData.append('profile_picture', file);
+
+    try {
+      await api.post('/users/me/photo/', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Profile picture updated!');
+      refresh();
+    } catch (err) {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <Section title="Personal Information" description="Update your basic profile details.">
         <div className="flex flex-col gap-8 md:flex-row md:items-start">
           {/* Avatar Upload */}
           <div className="relative group">
-            <div className="h-32 w-32 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 overflow-hidden">
-              <span className="text-3xl font-black text-zinc-400">
-                DF
-              </span>
+            <div className="h-32 w-32 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 overflow-hidden relative">
+              {user?.profile?.profile_picture ? (
+                <img 
+                  src={user.profile.profile_picture} 
+                  alt="Avatar" 
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-3xl font-black text-zinc-400">
+                  {user?.first_name?.[0] || 'U'}
+                </span>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </div>
+              )}
             </div>
-            <button className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black shadow-lg border-2 border-white dark:border-zinc-950 transition-transform hover:scale-110">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black shadow-lg border-2 border-white dark:border-zinc-950 transition-transform hover:scale-110 disabled:opacity-50"
+            >
               <Camera size={16} />
             </button>
           </div>
 
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputGroup label="First Name" value="Destiny" />
-            <InputGroup label="Last Name" value="Frank" />
-            <InputGroup label="Email" value="destiny@example.com" icon={<Mail size={16} />} disabled />
-            <InputGroup label="Phone Number" placeholder="+1 (555) 000-0000" icon={<Phone size={16} />} />
+            <InputGroup 
+              label="First Name" 
+              value={formData.first_name} 
+              onChange={(e: any) => setFormData({ ...formData, first_name: e.target.value })}
+            />
+            <InputGroup 
+              label="Last Name" 
+              value={formData.last_name} 
+              onChange={(e: any) => setFormData({ ...formData, last_name: e.target.value })}
+            />
+            <InputGroup label="Email" value={user?.email} icon={<Mail size={16} />} disabled />
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Biography</label>
+              <textarea 
+                value={formData.bio}
+                onChange={(e: any) => setFormData({ ...formData, bio: e.target.value })}
+                className="mt-2 w-full min-h-[100px] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4 text-sm transition-all focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent outline-none resize-none"
+                placeholder="Tell us about yourself..."
+              />
+            </div>
           </div>
         </div>
         <div className="mt-8 flex justify-end">
-          <button className="px-8 py-3 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-sm font-bold hover:shadow-xl transition-all">
-            Save Changes
+          <button 
+            onClick={handleUpdateProfile}
+            disabled={updating}
+            className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-sm font-bold hover:shadow-xl transition-all disabled:opacity-50"
+          >
+            {updating && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>}
+            {updating ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </Section>
@@ -160,7 +293,7 @@ function Section({ title, description, children }: { title: string; description:
   );
 }
 
-function InputGroup({ label, value, placeholder, icon, type = "text", disabled = false }: any) {
+function InputGroup({ label, value, onChange, placeholder, icon, type = "text", disabled = false }: any) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{label}</label>
@@ -172,7 +305,8 @@ function InputGroup({ label, value, placeholder, icon, type = "text", disabled =
         )}
         <input 
           type={type}
-          defaultValue={value}
+          value={value || ''}
+          onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
@@ -186,7 +320,7 @@ function InputGroup({ label, value, placeholder, icon, type = "text", disabled =
   );
 }
 
-function ToggleOption({ title, description, icon, defaultChecked }: any) {
+function ToggleOption({ title, description, icon, checked, onChange }: any) {
   return (
     <div className="flex items-center justify-between p-4 rounded-2xl border border-zinc-100 dark:border-zinc-900 hover:border-zinc-200 dark:hover:border-zinc-800 transition-all">
       <div className="flex gap-4">
@@ -197,7 +331,12 @@ function ToggleOption({ title, description, icon, defaultChecked }: any) {
         </div>
       </div>
       <label className="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" className="sr-only peer" defaultChecked={defaultChecked} />
+        <input 
+          type="checkbox" 
+          className="sr-only peer" 
+          checked={checked} 
+          onChange={(e) => onChange(e.target.checked)}
+        />
         <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-black dark:peer-checked:bg-white dark:peer-checked:after:bg-black"></div>
       </label>
     </div>

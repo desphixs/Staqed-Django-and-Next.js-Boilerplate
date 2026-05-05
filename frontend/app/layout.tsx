@@ -10,6 +10,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 // 'cn' is a helper utility used to neatly combine different CSS class names together.
 import { cn } from "@/lib/utils";
+import { Toaster } from 'sonner';
 
 // Here we configure the 'Geist' font, setting it up as a CSS variable so we can use it throughout our styles.
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
@@ -47,6 +48,7 @@ export default function RootLayout({
               no matter what page the user is on, the app knows if they are logged in or out.
           */}
           <AuthProvider>
+            <Toaster richColors position="top-right" />
             {/* 
                 The 'main' tag is the container for your actual page content. 
                 The '{children}' part is where the specific code for your Home, Login, or Register pages will be injected.
