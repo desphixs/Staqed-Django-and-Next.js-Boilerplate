@@ -264,19 +264,82 @@ function ProfileTab({ user, refresh }: { user: any; refresh: () => void }) {
 }
 
 function SecurityTab() {
+  const [passwords, setPasswords] = useState({
+    old_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  const [updating, setUpdating] = useState(false);
+
+  const handleUpdatePassword = async () => {
+    if (passwords.new_password !== passwords.confirm_password) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await api.post('/users/password-change/', {
+        old_password: passwords.old_password,
+        new_password: passwords.new_password,
+        new_password_confirm: passwords.confirm_password
+      });
+      toast.success("Password updated successfully!");
+      setPasswords({ old_password: '', new_password: '', confirm_password: '' });
+    } catch (err: any) {
+      const errorData = err.response?.data;
+      if (errorData) {
+        // Display specific field errors if they exist
+        Object.keys(errorData).forEach(key => {
+          if (Array.isArray(errorData[key])) {
+            errorData[key].forEach((msg: string) => toast.error(`${key}: ${msg}`));
+          } else {
+            toast.error(errorData[key]);
+          }
+        });
+      } else {
+        toast.error("Failed to update password.");
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
       <Section title="Password" description="Change your password regularly to keep your account secure.">
         <div className="max-w-md space-y-4">
-          <InputGroup label="Current Password" type="password" icon={<Lock size={16} />} />
-          <InputGroup label="New Password" type="password" icon={<Lock size={16} />} />
-          <InputGroup label="Confirm New Password" type="password" icon={<Lock size={16} />} />
-          <button className="mt-2 w-full px-6 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all">
-            Update Password
+          <InputGroup 
+            label="Current Password" 
+            type="password" 
+            icon={<Lock size={16} />} 
+            value={passwords.old_password}
+            onChange={(e: any) => setPasswords({ ...passwords, old_password: e.target.value })}
+          />
+          <InputGroup 
+            label="New Password" 
+            type="password" 
+            icon={<Lock size={16} />} 
+            value={passwords.new_password}
+            onChange={(e: any) => setPasswords({ ...passwords, new_password: e.target.value })}
+          />
+          <InputGroup 
+            label="Confirm New Password" 
+            type="password" 
+            icon={<Lock size={16} />} 
+            value={passwords.confirm_password}
+            onChange={(e: any) => setPasswords({ ...passwords, confirm_password: e.target.value })}
+          />
+          <button 
+            onClick={handleUpdatePassword}
+            disabled={updating}
+            className="mt-2 w-full px-6 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {updating && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>}
+            {updating ? 'Updating...' : 'Update Password'}
           </button>
         </div>
       </Section>
-
     </div>
   );
 }

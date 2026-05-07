@@ -5,6 +5,7 @@ from .views import (
     RequestMagicLinkView, VerifyMagicLinkView,
     RequestOTPView, VerifyOTPView,
     ProfilePictureUpdateView,
+    PasswordResetRequestView, PasswordResetConfirmView, PasswordChangeView
 )
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     path('token/refresh/',  CookieTokenRefreshView.as_view(),name='token_refresh'),
     path('me/',             MeView.as_view(),                name='user_me'),
     path('me/photo/',       ProfilePictureUpdateView.as_view(), name='user_photo'),
+    path('password-change/',PasswordChangeView.as_view(),    name='password_change'),
 
     # ── Social Auth ────────────────────────────────────────────────────────────
     path('google/',         GoogleLogin.as_view(),           name='google_login'),
@@ -26,4 +28,8 @@ urlpatterns = [
     # ── OTP ────────────────────────────────────────────────────────────────────
     path('otp/request/',    RequestOTPView.as_view(),        name='otp_request'),
     path('otp/verify/',     VerifyOTPView.as_view(),         name='otp_verify'),
+
+    # ── Password Reset ─────────────────────────────────────────────────────────
+    path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]

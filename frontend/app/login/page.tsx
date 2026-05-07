@@ -187,7 +187,15 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Password</label>
+                <Link 
+                  href="/auth/password-reset" 
+                  className="text-xs font-bold text-zinc-500 hover:text-black dark:hover:text-white"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input 
                 {...passwordForm.register('password')}
                 type="password"

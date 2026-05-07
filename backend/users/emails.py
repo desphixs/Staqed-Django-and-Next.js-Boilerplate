@@ -52,3 +52,27 @@ def send_otp_email(to_email: str, otp: str, first_name: str = '') -> None:
         html_message=html_message,
         fail_silently=False,
     )
+
+
+def send_password_reset_email(to_email: str, reset_link: str, first_name: str = '') -> None:
+    """
+    Sends a password reset link to the user.
+    """
+    subject = 'Reset your Staplate password'
+    
+    context = {
+        'name': first_name,
+        'reset_link': reset_link
+    }
+    
+    html_message = render_to_string('emails/password_reset.html', context)
+    plain_message = strip_tags(html_message)
+
+    send_mail(
+        subject=subject,
+        message=plain_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[to_email],
+        html_message=html_message,
+        fail_silently=False,
+    )

@@ -55,6 +55,7 @@ class LoginToken(models.Model):
     TOKEN_TYPES = [
         ('magic_link', 'Magic Link'), # A long secure URL token
         ('otp', 'OTP'),               # A short 6-digit code
+        ('password_reset', 'Password Reset'), # Token for resetting password
     ]
 
     email      = models.EmailField()                                        # The email this token was sent to
@@ -109,6 +110,25 @@ class LoginToken(models.Model):
             email=email,
             token=otp,
             token_type='otp',
+            expires_at=expires_at,
+        )
+
+    @classmethod
+    def generate_password_reset_token(cls, email):
+        """
+        Creates a new secure token for resetting the user's password.
+        Valid for 30 minutes.
+        """
+        # Wipe any previously unused reset tokens for this address
+        cls.objects.filter(email=email, token_type='password_reset', is_used=False).delete()
+
+        token = secrets.token_urlsafe(40)                          # Generates a cryptographically secure random string
+        expires_at = timezone.now() + timedelta(minutes=30)        # Password reset tokens are valid for 30 minutes
+
+        return cls.objects.create(
+            email=email,
+            token=token,
+            token_type='password_reset',
             expires_at=expires_at,
         )
 
